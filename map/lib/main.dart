@@ -1,6 +1,7 @@
 // ignore_for_file: prefer_const_constructors
 
 import 'dart:async';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import 'package:flutter/material.dart';
@@ -21,12 +22,17 @@ class MyApp extends StatelessWidget {
 
 class MapSample extends StatefulWidget {
   const MapSample({Key? key}) : super(key: key);
-
+ 
   @override
   State<MapSample> createState() => MapSampleState();
 }
 
 class MapSampleState extends State<MapSample> {
+
+  late double lat=0;
+  late double long=0;
+
+
   final Completer<GoogleMapController> _controller =
       Completer<GoogleMapController>();
 
@@ -81,6 +87,31 @@ class MapSampleState extends State<MapSample> {
       tilt: 59.440717697143555,
       zoom: 19.151926040649414);
 
+
+
+      //Getting current location
+      Future<Position> getCurrentLocation() async{
+        bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        /*if(!serviceEnabled){
+          return Future.error('Location services are disabled.');
+        }*/
+        LocationPermission permission= await Geolocator.checkPermission();
+        if(permission == LocationPermission.denied){
+          permission = await Geolocator.requestPermission();
+          if(permission == LocationPermission.denied){
+            return Future.error('Location permissions are denied!');
+          }
+        }
+
+        if(permission == LocationPermission.deniedForever){
+          return Future.error('Location permissions are permanently denied, we cannot request permissions.');
+
+        }
+        return await Geolocator.getCurrentPosition();
+      }
+
+      
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -99,15 +130,30 @@ class MapSampleState extends State<MapSample> {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _goToTheLake,
-        label: const Text('To the UNIIIII!'),
+        onPressed: _goToTheLocation,
+        label: const Text('Create a Note!'),
         icon: const Icon(Icons.directions_boat),
       ),
     );
+
+    
+
   }
 
-  Future<void> _goToTheLake() async {
+  Future<void> _goToTheLocation() async {
+    getCurrentLocation().then((value){
+      lat = value.latitude;
+      long = value.longitude;
+    });
+    if(lat==0 && long==0){
+      return;
+    }
+      CameraPosition currentLocation = CameraPosition(
+      bearing: 192.8334901395799,
+      target: new LatLng(lat, long),
+      tilt: 59.440717697143555,
+      zoom: 19.151926040649414);
     final GoogleMapController controller = await _controller.future;
-    controller.animateCamera(CameraUpdate.newCameraPosition(_AkdenizUni));
+    controller.animateCamera(CameraUpdate.newCameraPosition(currentLocation));
   }
 }
